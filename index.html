@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nestiq - Interactive Parcel Tracking & Logistics Network</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        accent: {
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        borderbg: '#334155'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background-color: #0b1120;
+            color: #f1f5f9;
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-panel-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel-hover:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.15);
+        }
+
+        /* Canvas background grid */
+        .bg-grid {
+            background-size: 30px 30px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0ea5e9;
+        }
+
+        /* Node animation glow */
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.8)); }
+            50% { filter: drop-shadow(0 0 18px rgba(45, 212, 191, 1)); }
+        }
+        .node-active {
+            animation: pulse-glow 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-brand-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80 bg-slate-900/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('tracking')">
+                <div class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-tr from-brand-600 to-accent-500 shadow-lg shadow-brand-500/20">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.29 7 12 12 20.71 7"></polyline>
+                        <line x1="12" y1="22" x2="12" y2="12"></line>
+                        <circle cx="12" cy="12" r="2.5" class="fill-accent-400 stroke-white" stroke-width="1.5"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-white via-slate-100 to-brand-400 bg-clip-text text-transparent tracking-wider">NESTIQ</span>
+                    <span class="text-xs font-medium text-accent-400 block -mt-1 tracking-widest uppercase">Logistics Network</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex space-x-1 lg:space-x-2">
+                <button onclick="switchTab('tracking')" id="nav-tracking" class="nav-btn active-tab px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+                    <i data-lucide="route" class="w-4 h-4"></i>
+                    <span>ระบบติดตามด้วย Graph</span>
+                </button>
+                <button onclick="switchTab('hierarchy')" id="nav-hierarchy" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="network" class="w-4 h-4"></i>
+                    <span>การจัดหมวดหมู่ด้วย Tree</span>
+                </button>
+                <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="package" class="w-4 h-4"></i>
+                    <span>รายการพัสดุ</span>
+                </button>
+                <button onclick="switchTab('planner')" id="nav-planner" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    <span>คำนวณวางแผนเส้นทาง</span>
+                </button>
+            </nav>
+
+            <!-- Status Indicator Badge -->
+            <div class="flex items-center space-x-3">
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>Graph Engine Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Submenu -->
+        <div class="md:hidden flex overflow-x-auto px-4 py-2 bg-slate-900 border-t border-slate-800 gap-2 no-scrollbar">
+            <button onclick="switchTab('tracking')" id="mob-nav-tracking" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap bg-brand-600 text-white">ติดตามด้วย Graph</button>
+            <button onclick="switchTab('hierarchy')" id="mob-nav-hierarchy" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap bg-slate-800 text-slate-300">หมวดหมู่ด้วย Tree</button>
+            <button onclick="switchTab('inventory')" id="mob-nav-inventory" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap bg-slate-800 text-slate-300">รายการพัสดุ</button>
+            <button onclick="switchTab('planner')" id="mob-nav-planner" class="px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap bg-slate-800 text-slate-300">วางแผนเส้นทาง</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ================= PAGE 1: PARCEL TRACKING & GRAPH ROUTE ================= -->
+        <section id="page-tracking" class="tab-content block space-y-6">
+            <!-- Top Search & Quick Control Bar -->
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="w-full md:w-1/2 flex items-center gap-3">
+                    <div class="relative flex-grow">
+                        <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="tracking-input" value="NST-8842-TH" placeholder="กรอกหมายเลขพัสดุ (เช่น NST-8842-TH)" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-brand-500 text-sm">
+                    </div>
+                    <button onclick="trackParcelFromInput()" class="px-5 py-2.5 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-medium rounded-xl text-sm transition shadow-md shadow-brand-500/20 flex items-center gap-2">
+                        <i data-lucide="navigation" class="w-4 h-4"></i>
+                        <span>ติดตาม</span>
+                    </button>
+                </div>
+                <div class="w-full md:w-auto flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+                    <span class="text-xs text-slate-400 whitespace-nowrap">ตัวอย่างพัสดุ:</span>
+                    <button onclick="selectSampleParcel('NST-8842-TH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-brand-400 rounded-lg text-xs font-mono">NST-8842-TH</button>
+                    <button onclick="selectSampleParcel('NST-9012-TH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-accent-400 rounded-lg text-xs font-mono">NST-9012-TH</button>
+                    <button onclick="selectSampleParcel('NST-4421-TH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 rounded-lg text-xs font-mono">NST-4421-TH</button>
+                </div>
+            </div>
+
+            <!-- Parcel Overview Info Strip -->
+            <div id="parcel-info-card" class="glass-panel p-5 rounded-2xl border border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">หมายเลขพัสดุ</span>
+                    <span id="info-code" class="text-lg font-bold font-mono text-brand-400">NST-8842-TH</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">ผู้รับปลายทาง</span>
+                    <span id="info-recipient" class="text-base font-semibold text-slate-100">สมชาย วงศ์สวัสดิ์ (เชียงใหม่)</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">ต้นทาง &rarr; ปลายทาง</span>
+                    <span id="info-route" class="text-sm font-medium text-slate-200">PTN-Hub &rarr; CMI-Hub</span>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block mb-1">สถานะปัจจุบัน</span>
+                    <span id="info-status" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>
+                        กำลังขนส่งระหว่างศูนย์
+                    </span>
+                </div>
+            </div>
+
+            <!-- Graph Canvas & Adjacency Visualizer Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Interactive Graph Canvas (2 Cols) -->
+                <div class="lg:col-span-2 glass-panel p-5 rounded-2xl border border-slate-800 relative flex flex-col justify-between">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                                <i data-lucide="share-2" class="w-5 h-5 text-brand-400"></i>
+                                แผนผังโครงข่ายเส้นทางขนส่ง (Weighted Graph Network)
+                            </h2>
+                            <p class="text-xs text-slate-400">แสดง Vertex (ศูนย์กระจายสินค้า 7 แห่ง) และ Edge (เส้นทางพร้อมระยะทาง km)</p>
+                        </div>
+
+                        <!-- Graph Controls -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="runTraversal('dijkstra')" class="px-3 py-1.5 bg-brand-600/80 hover:bg-brand-500 text-white rounded-lg text-xs font-medium transition flex items-center gap-1.5">
+                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                Shortest Path (Dijkstra)
+                            </button>
+                            <button onclick="runTraversal('bfs')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition border border-slate-700">
+                                BFS Traversal
+                            </button>
+                            <button onclick="runTraversal('dfs')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition border border-slate-700">
+                                DFS Traversal
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SVG Canvas Container -->
+                    <div class="relative w-full h-[380px] bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden bg-grid">
+                        <svg id="graph-svg" class="w-full h-full cursor-grab active:cursor-grabbing">
+                            <!-- Edges & Vertices rendered via JavaScript -->
+                        </svg>
+
+                        <!-- Legend Floating Card -->
+                        <div class="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-300"></span>
+                                <span>Vertex ต้นทาง (Start Hub)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-rose-500 border border-rose-300"></span>
+                                <span>Vertex ปลายทาง (Destination)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-brand-500 border border-brand-300"></span>
+                                <span>Vertex โหนดปัจจุบัน (Active Hub)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step Explanation Box -->
+                    <div id="graph-explanation-box" class="mt-4 p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-xs text-slate-300 flex items-start gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-brand-400 mt-0.5 shrink-0"></i>
+                        <span id="explanation-text">เลือกพัสดุ หรือกดปุ่มอัลกอริทึมเพื่อจำลองการค้นหาเส้นทางแบบ Step-by-Step</span>
+                    </div>
+                </div>
+
+                <!-- Adjacency List Panel (1 Col) -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                                <i data-lucide="list-tree" class="w-4 h-4 text-accent-400"></i>
+                                Adjacency List (ตารางความสัมพันธ์)
+                            </h3>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">JS Data Structure</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">แสดงรายการ Vertex ชิดเคียงพร้อมน้ำหนักของ Edge (ระยะทาง km) ที่เชื่อมต่อกัน</p>
+                        
+                        <div id="adj-list-container" class="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                            <!-- Adjacency List dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[11px] text-slate-400">
+                        <span class="font-semibold text-slate-300">ข้อกำหนด Graph:</span> 7 Vertices, 9 Weighted Edges แบบ Un-directed Graph
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 2: PARCEL CATEGORIZATION & WAREHOUSE HIERARCHY ================= -->
+        <section id="page-hierarchy" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-md-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                        <i data-lucide="folder-tree" class="w-6 h-6 text-accent-400"></i>
+                        โครงสร้างลำดับชั้นคลังสินค้า (Warehouse Tree Hierarchy)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">แสดงความสัมพันธ์แบบ Root, Parent, Child และ Leaf ในการจัดเก็บพัสดุ 4 ระดับ (Height = 3)</p>
+                </div>
+
+                <!-- Tree Traversal Controls -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-slate-400 mr-1">Tree Traversal:</span>
+                    <button onclick="runTreeTraversal('preorder')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-brand-400 border border-slate-700 rounded-lg text-xs font-medium transition">
+                        Pre-order
+                    </button>
+                    <button onclick="runTreeTraversal('postorder')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-accent-400 border border-slate-700 rounded-lg text-xs font-medium transition">
+                        Post-order
+                    </button>
+                    <button onclick="runTreeTraversal('bfs')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-xs font-medium transition">
+                        Level-order (BFS)
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tree Visualizer Canvas (2 Cols) -->
+                <div class="lg:col-span-2 glass-panel p-5 rounded-2xl border border-slate-800">
+                    <div class="relative w-full h-[450px] bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden bg-grid">
+                        <svg id="tree-svg" class="w-full h-full">
+                            <!-- Tree visual SVG dynamically rendered -->
+                        </svg>
+
+                        <!-- Level Labels -->
+                        <div class="absolute left-3 top-3 space-y-16 text-[10px] font-mono text-slate-500 pointer-events-none">
+                            <div class="bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">Level 0 (Root)</div>
+                            <div class="bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">Level 1 (Category)</div>
+                            <div class="bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">Level 2 (Zone)</div>
+                            <div class="bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">Level 3 (Leaf Parcels)</div>
+                        </div>
+                    </div>
+
+                    <!-- Traversal Output Result Sequence Bar -->
+                    <div class="mt-4 p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-300" id="traversal-title">ผลลัพธ์การท่องโหนด (Traversal Output)</span>
+                            <span id="traversal-type-tag" class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">Click any Traversal button above</span>
+                        </div>
+                        <div id="traversal-sequence" class="text-xs font-mono text-slate-400 flex flex-wrap gap-1.5 mt-1 min-h-[24px]">
+                            <span class="text-slate-500 italic">เลือกปุ่ม Pre-order, Post-order หรือ BFS ด้านบนเพื่อแสดงลำดับการท่องโหนด...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tree Node Inspector Panel (1 Col) -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100 mb-3 flex items-center gap-2">
+                            <i data-lucide="file-search" class="w-4 h-4 text-brand-400"></i>
+                            Node Property Inspector
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">คลิกเลือกโหนดใน Tree เพื่อตรวจสอบคุณลักษณะเชิงทฤษฎี Tree</p>
+
+                        <div id="tree-node-details" class="space-y-3 bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+                            <div>
+                                <span class="text-[11px] text-slate-400 uppercase tracking-wider block">Selected Node</span>
+                                <span id="tree-node-name" class="text-base font-bold text-brand-400">Nestiq Central Hub</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Node Role</span>
+                                    <span id="tree-node-role" class="text-xs font-semibold text-emerald-400">ROOT NODE</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Depth / Level</span>
+                                    <span id="tree-node-depth" class="text-xs font-semibold text-slate-200">Level 0</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-800/80">
+                                <span class="text-[10px] text-slate-400 block mb-0.5">Parent Node</span>
+                                <span id="tree-node-parent" class="text-xs font-medium text-slate-300">None (Root Has No Parent)</span>
+                            </div>
+                            <div class="pt-2 border-t border-slate-800/80">
+                                <span class="text-[10px] text-slate-400 block mb-0.5">Children Nodes</span>
+                                <div id="tree-node-children" class="text-xs text-slate-300 flex flex-wrap gap-1">
+                                    <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs">Electronics</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs">Apparel</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs">Home & Living</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-800/80">
+                                <span class="text-[10px] text-slate-400 block mb-1">Root-to-Leaf Path (เส้นทางสืบเชื้อสาย)</span>
+                                <div id="tree-node-path" class="text-xs font-mono text-accent-400 bg-slate-950 p-2 rounded border border-slate-800 break-all">
+                                    Root
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[11px] text-slate-400">
+                        <span class="font-semibold text-slate-300">การประยุกต์ Tree:</span> ใช้จัดโครงสร้างคลังสินค้าแบบสอบถามตำแหน่งพัสดุอย่างรวดเร็วผ่าน Path จาก Root ถึง Leaf
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 3: PARCELS & INVENTORY LIST ================= -->
+        <section id="page-inventory" class="tab-content hidden space-y-6">
+            <!-- Filter & Search Toolbar -->
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="w-full md:w-1/3 relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="inventory-search" oninput="filterInventory()" placeholder="ค้นหาตามรหัสพัสดุ, ชื่อสินค้า, ผู้รับ..." class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="w-full md:w-auto flex items-center gap-3 overflow-x-auto">
+                    <select id="filter-category" onchange="filterInventory()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none">
+                        <option value="ALL">ทุกหมวดหมู่สินค้า (All Categories)</option>
+                        <option value="Electronics">Electronics (อิเล็กทรอนิกส์)</option>
+                        <option value="Apparel">Apparel (เครื่องแต่งกาย)</option>
+                        <option value="Home & Living">Home & Living (ของใช้ในบ้าน)</option>
+                    </select>
+
+                    <select id="filter-status" onchange="filterInventory()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none">
+                        <option value="ALL">ทุกสถานะ (All Statuses)</option>
+                        <option value="In Transit">In Transit (กำลังขนส่ง)</option>
+                        <option value="Sorting Hub">Sorting Hub (อยู่ ณ ศูนย์คัดแยก)</option>
+                        <option value="Delivered">Delivered (จัดส่งสำเร็จแล้ว)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Parcels Data Table Card -->
+            <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+                            <tr>
+                                <th class="py-3.5 px-4">Tracking Code</th>
+                                <th class="py-3.5 px-4">รายการสินค้า (Leaf Item)</th>
+                                <th class="py-3.5 px-4">หมวดหมู่ (Tree Category)</th>
+                                <th class="py-3.5 px-4">ตำแหน่งปัจจุบัน (Graph Hub)</th>
+                                <th class="py-3.5 px-4">ผู้รับ (Recipient)</th>
+                                <th class="py-3.5 px-4">สถานะ</th>
+                                <th class="py-3.5 px-4 text-right">แอคชัน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Dynamically generated rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 4: INTERACTIVE ROUTE PLANNER ================= -->
+        <section id="page-planner" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Controls & Dynamic Graph Edits (1 Col) -->
+                <div class="space-y-6">
+                    <!-- Route Optimization Box -->
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="calculator" class="w-5 h-5 text-brand-400"></i>
+                            คำนวณเส้นทางจัดส่งพัสดุที่สั้นที่สุด
+                        </h3>
+                        <p class="text-xs text-slate-400">ประมวลผลอัลกอริทึม Dijkstra เพื่อหาคำตอบ Optimal Route ระหว่าง 2 Vertices</p>
+
+                        <div class="space-y-3 pt-2">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">เลือก HUB ต้นทาง (Start Vertex)</label>
+                                <select id="planner-start" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">เลือก HUB ปลายทาง (Destination Vertex)</label>
+                                <select id="planner-end" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                            </div>
+
+                            <button onclick="calculateCustomRoute()" class="w-full py-2.5 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-500 hover:to-accent-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+                                <i data-lucide="play" class="w-4 h-4"></i>
+                                ประมวลผล Dijkstra Path
+                            </button>
+                        </div>
+
+                        <!-- Routing Result Summary -->
+                        <div id="planner-result-box" class="hidden pt-3 border-t border-slate-800 space-y-2 text-xs">
+                            <div class="flex justify-between text-slate-300">
+                                <span>เส้นทางที่แนะนำ:</span>
+                                <span id="plan-path-str" class="font-bold font-mono text-accent-400">-</span>
+                            </div>
+                            <div class="flex justify-between text-slate-300">
+                                <span>ระยะทางรวม (Total Weight):</span>
+                                <span id="plan-distance" class="font-bold text-emerald-400">- km</span>
+                            </div>
+                            <div class="flex justify-between text-slate-300">
+                                <span>ประมาณการเวลาขนส่ง:</span>
+                                <span id="plan-time" class="font-bold text-brand-400">- ชั่วโฒง</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Graph Expander (Add Vertex / Edge) -->
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="w-5 h-5 text-accent-400"></i>
+                            ขยายโครงข่าย Graph (Dynamic Network)
+                        </h3>
+                        <p class="text-xs text-slate-400">ทดลองเพิ่ม Vertex หรือเชื่อม Weighted Edge ใหม่เข้าสู่ระบบ</p>
+
+                        <!-- Add Edge Form -->
+                        <div class="space-y-2 pt-2 border-t border-slate-800">
+                            <span class="text-xs font-semibold text-slate-300 block">เพิ่มเส้นทางเชื่อมต่อ (Add Edge)</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <select id="edge-from" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200"></select>
+                                <select id="edge-to" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200"></select>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="number" id="edge-weight" placeholder="ระยะทาง (km)" value="150" class="w-1/2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200">
+                                <button onclick="addNewEdge()" class="w-1/2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-medium">เพิ่ม Edge</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canvas Visualizer (2 Cols) -->
+                <div class="lg:col-span-2 glass-panel p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-100 mb-1 flex items-center gap-2">
+                            <i data-lucide="map" class="w-5 h-5 text-brand-400"></i>
+                            การตอบสนองของ Graph Network แบบ Real-time
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">เส้นทางไฮไลท์สีเขียวเข้มคือ Shortest Path ที่คำนวณได้</p>
+                    </div>
+
+                    <div class="relative w-full h-[420px] bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden bg-grid">
+                        <svg id="planner-graph-svg" class="w-full h-full">
+                            <!-- SVG Rendered Graph -->
+                        </svg>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-xs text-slate-400">
+                        <span class="font-semibold text-slate-300">หมายเหตุทางคณิตศาสตร์:</span> Algorithm Dijkstra ประมวลผลบน Non-negative Weighted Graph ด้วย Time Complexity $O((V + E) \log V)$
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Parcel Modal Dialog for Inventory Details -->
+    <div id="parcel-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-xl p-6 rounded-2xl border border-slate-700 shadow-2xl relative space-y-4">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
+                    <i data-lucide="package-search" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 id="modal-code" class="text-lg font-bold text-slate-100">NST-8842-TH</h3>
+                    <p id="modal-item" class="text-xs text-slate-400">Smartphone Galaxy Ultra 256GB</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+                <div>
+                    <span class="text-slate-500 block">หมวดหมู่ (Tree Leaf Parent):</span>
+                    <span id="modal-category" class="font-semibold text-brand-400">Electronics &gt; Smartphones</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">ตำแหน่ง Hub (Graph Node):</span>
+                    <span id="modal-hub" class="font-semibold text-accent-400">BKK-Central</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">ผู้ส่ง (Sender):</span>
+                    <span id="modal-sender" class="text-slate-300">Nestiq Retail BKK</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">ผู้รับ (Recipient):</span>
+                    <span id="modal-recipient" class="text-slate-300">สมชาย วงศ์สวัสดิ์</span>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs">
+                <span class="font-semibold text-slate-300 block mb-1">การระบุตำแหน่งในระบบคณิตศาสตร์ดิสครีต:</span>
+                <p id="modal-discrete-desc" class="text-slate-400 text-[11px] leading-relaxed">
+                    พัสดุนี้จัดเป็น Leaf Node ในโครงสร้าง Tree และขณะนี้กำลังพักอยู่ ณ Vertex [BKK-Central] ใน Graph
+                </p>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+            <div>
+                <span class="font-semibold text-slate-400">Nestiq Logistics App</span> &bull; โครงงาน Discrete Mathematics for IT
+            </div>
+            <div class="flex items-center space-x-4 text-[11px]">
+                <span>Graph Theory (Vertices: 7+, Edges: 9+)</span>
+                <span>Tree Hierarchy (4 Levels)</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /* ================= DATA STRUCTURES & DISCRETE MATH DATA ================= */
+
+        // 1. GRAPH DATA STRUCTURE (7 Hubs/Vertices, Weighted Edges in km)
+        const initialNodes = [
+            { id: 'BKK-Central', name: 'BKK Central Hub', label: 'ศูนย์กลางกรุงเทพฯ', x: 280, y: 190 },
+            { id: 'BKK-North', name: 'BKK North Sorting', label: 'คัดแยกปทุมธานี', x: 220, y: 120 },
+            { id: 'CMI-Hub', name: 'Chiang Mai Hub', label: 'ศูนย์เชียงใหม่', x: 120, y: 50 },
+            { id: 'KKN-Hub', name: 'Khon Kaen Hub', label: 'ศูนย์ขอนแก่น', x: 440, y: 100 },
+            { id: 'HYY-Hub', name: 'Hat Yai Hub', label: 'ศูนย์หาดใหญ่', x: 150, y: 320 },
+            { id: 'PTN-Hub', name: 'Pattani Hub', label: 'ศูนย์ปัตตานี', x: 230, y: 350 },
+            { id: 'CHB-Hub', name: 'Chonburi Hub', label: 'ศูนย์ชลบุรี', x: 420, y: 220 }
+        ];
+
+        let graphNodes = [...initialNodes];
+
+        let graphEdges = [
+            { from: 'BKK-Central', to: 'BKK-North', weight: 45 },
+            { from: 'BKK-North', to: 'CMI-Hub', weight: 650 },
+            { from: 'BKK-Central', to: 'KKN-Hub', weight: 420 },
+            { from: 'BKK-Central', to: 'CHB-Hub', weight: 80 },
+            { from: 'BKK-Central', to: 'HYY-Hub', weight: 940 },
+            { from: 'HYY-Hub', to: 'PTN-Hub', weight: 105 },
+            { from: 'KKN-Hub', to: 'CHB-Hub', weight: 380 },
+            { from: 'CMI-Hub', to: 'KKN-Hub', weight: 610 },
+            { from: 'BKK-North', to: 'KKN-Hub', weight: 400 }
+        ];
+
+        // 2. TREE DATA STRUCTURE (Warehouse Inventory Hierarchy)
+        const treeData = {
+            id: 'root',
+            name: 'Nestiq Central Warehouse',
+            role: 'ROOT NODE',
+            depth: 0,
+            children: [
+                {
+                    id: 'cat-elec',
+                    name: 'Electronics',
+                    role: 'CATEGORY NODE',
+                    depth: 1,
+                    children: [
+                        {
+                            id: 'sub-smartphones',
+                            name: 'Smartphones',
+                            role: 'ZONE NODE',
+                            depth: 2,
+                            children: [
+                                { id: 'item-8842', name: 'NST-8842-TH (Galaxy S24)', role: 'LEAF NODE', depth: 3, tracking: 'NST-8842-TH' },
+                                { id: 'item-9012', name: 'NST-9012-TH (iPhone 15)', role: 'LEAF NODE', depth: 3, tracking: 'NST-9012-TH' }
+                            ]
+                        },
+                        {
+                            id: 'sub-laptops',
+                            name: 'Laptops',
+                            role: 'ZONE NODE',
+                            depth: 2,
+                            children: [
+                                { id: 'item-1022', name: 'NST-1022-TH (MacBook Pro)', role: 'LEAF NODE', depth: 3, tracking: 'NST-1022-TH' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'cat-apparel',
+                    name: 'Apparel',
+                    role: 'CATEGORY NODE',
+                    depth: 1,
+                    children: [
+                        {
+                            id: 'sub-footwear',
+                            name: 'Footwear',
+                            role: 'ZONE NODE',
+                            depth: 2,
+                            children: [
+                                { id: 'item-4421', name: 'NST-4421-TH (Nike Air Max)', role: 'LEAF NODE', depth: 3, tracking: 'NST-4421-TH' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'cat-home',
+                    name: 'Home & Living',
+                    role: 'CATEGORY NODE',
+                    depth: 1,
+                    children: [
+                        {
+                            id: 'sub-furniture',
+                            name: 'Furniture',
+                            role: 'ZONE NODE',
+                            depth: 2,
+                            children: [
+                                { id: 'item-3390', name: 'NST-3390-TH (Ergonomic Chair)', role: 'LEAF NODE', depth: 3, tracking: 'NST-3390-TH' }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // 3. PARCELS LIST DATABASE
+        const parcelsDatabase = [
+            { code: 'NST-8842-TH', item: 'Samsung Galaxy S24 Ultra', category: 'Electronics > Smartphones', hub: 'BKK-Central', startHub: 'PTN-Hub', destHub: 'CMI-Hub', recipient: 'สมชาย วงศ์สวัสดิ์', status: 'In Transit' },
+            { code: 'NST-9012-TH', item: 'iPhone 15 Pro Max', category: 'Electronics > Smartphones', hub: 'KKN-Hub', startHub: 'CHB-Hub', destHub: 'KKN-Hub', recipient: 'กมลชนก ใจดี', status: 'Sorting Hub' },
+            { code: 'NST-4421-TH', item: 'Nike Air Max 270', category: 'Apparel > Footwear', hub: 'CMI-Hub', startHub: 'BKK-Central', destHub: 'CMI-Hub', recipient: 'อนันต์ สุขเสริฐ', status: 'Delivered' },
+            { code: 'NST-1022-TH', item: 'MacBook Pro M3 16"', category: 'Electronics > Laptops', hub: 'BKK-North', startHub: 'BKK-North', destHub: 'HYY-Hub', recipient: 'วิภาดา บุญมี', status: 'In Transit' },
+            { code: 'NST-3390-TH', item: 'Ergonomic Office Chair', category: 'Home & Living > Furniture', hub: 'CHB-Hub', startHub: 'CHB-Hub', destHub: 'PTN-Hub', recipient: 'ธนกร ชัยชนะ', status: 'Sorting Hub' }
+        ];
+
+        let currentActiveParcel = parcelsDatabase[0];
+        let selectedTreeNode = treeData;
+
+        /* ================= GRAPH RENDERER & VISUALIZER ================= */
+
+        function renderAdjacencyList() {
+            const container = document.getElementById('adj-list-container');
+            container.innerHTML = '';
+
+            graphNodes.forEach(node => {
+                const adjEdges = graphEdges.filter(e => e.from === node.id || e.to === node.id);
+                const adjListStr = adjEdges.map(e => {
+                    const targetId = e.from === node.id ? e.to : e.from;
+                    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-800 text-[11px] font-mono text-brand-400 border border-slate-700">
+                        ${targetId} <span class="text-slate-500 ml-1">(${e.weight}km)</span>
+                    </span>`;
+                }).join(' ');
+
+                const itemHtml = `
+                    <div class="p-2 bg-slate-900/80 rounded-lg border border-slate-800/80 flex flex-col gap-1 hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold font-mono text-slate-200">${node.id}</span>
+                            <span class="text-[10px] text-slate-500">${node.label}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1 mt-0.5">
+                            ${adjListStr || '<span class="text-[10px] text-slate-600">ไม่มี Edge เชื่อมต่อ</span>'}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += itemHtml;
+            });
+        }
+
+        function drawGraphSvg(svgId, highlightedNodes = [], highlightedEdges = []) {
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+            svg.innerHTML = '';
+
+            // Draw Edges
+            graphEdges.forEach(edge => {
+                const source = graphNodes.find(n => n.id === edge.from);
+                const target = graphNodes.find(n => n.id === edge.to);
+                if (!source || !target) return;
+
+                const isHighlighted = highlightedEdges.some(he => 
+                    (he.from === edge.from && he.to === edge.to) || (he.from === edge.to && he.to === edge.from)
+                );
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', source.x);
+                line.setAttribute('y1', source.y);
+                line.setAttribute('x2', target.x);
+                line.setAttribute('y2', target.y);
+                line.setAttribute('stroke', isHighlighted ? '#10b981' : '#334155');
+                line.setAttribute('stroke-width', isHighlighted ? '4' : '2');
+                if (isHighlighted) line.setAttribute('stroke-dasharray', '6 3');
+                svg.appendChild(line);
+
+                // Edge Weight Label
+                const midX = (source.x + target.x) / 2;
+                const midY = (source.y + target.y) / 2;
+                const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                textBg.setAttribute('x', midX - 16);
+                textBg.setAttribute('y', midY - 9);
+                textBg.setAttribute('width', '32');
+                textBg.setAttribute('height', '16');
+                textBg.setAttribute('rx', '4');
+                textBg.setAttribute('fill', '#0f172a');
+                textBg.setAttribute('stroke', '#1e293b');
+                svg.appendChild(textBg);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY + 3);
+                text.setAttribute('fill', isHighlighted ? '#34d399' : '#94a3b8');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('font-family', 'monospace');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = `${edge.weight}k`;
+                svg.appendChild(text);
+            });
+
+            // Draw Vertices / Nodes
+            graphNodes.forEach(node => {
+                const isStart = currentActiveParcel.startHub === node.id;
+                const isDest = currentActiveParcel.destHub === node.id;
+                const isVisited = highlightedNodes.includes(node.id);
+
+                let fillColor = '#1e293b';
+                let strokeColor = '#38bdf8';
+
+                if (isStart) {
+                    fillColor = '#059669';
+                    strokeColor = '#34d399';
+                } else if (isDest) {
+                    fillColor = '#e11d48';
+                    strokeColor = '#fb7185';
+                } else if (isVisited) {
+                    fillColor = '#0284c7';
+                    strokeColor = '#38bdf8';
+                }
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'cursor-pointer');
+                g.onclick = () => onNodeClick(node.id);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', '18');
+                circle.setAttribute('fill', fillColor);
+                circle.setAttribute('stroke', strokeColor);
+                circle.setAttribute('stroke-width', '2.5');
+                if (isVisited || isStart || isDest) circle.setAttribute('class', 'node-active');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', node.x);
+                text.setAttribute('y', node.y + 4);
+                text.setAttribute('fill', '#ffffff');
+                text.setAttribute('font-size', '9');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('font-family', 'sans-serif');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = node.id.split('-')[0];
+
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', node.x);
+                label.setAttribute('y', node.y + 32);
+                label.setAttribute('fill', '#94a3b8');
+                label.setAttribute('font-size', '10');
+                label.setAttribute('text-anchor', 'middle');
+                label.textContent = node.label;
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                g.appendChild(label);
+                svg.appendChild(g);
+            });
+        }
+
+        /* ================= GRAPH ALGORITHMS (DIJKSTRA, BFS, DFS) ================= */
+
+        function dijkstra(startId, endId) {
+            const distances = {};
+            const previous = {};
+            const nodesSet = new Set();
+
+            graphNodes.forEach(node => {
+                distances[node.id] = Infinity;
+                previous[node.id] = null;
+                nodesSet.add(node.id);
+            });
+
+            distances[startId] = 0;
+
+            while (nodesSet.size > 0) {
+                let smallest = null;
+                nodesSet.forEach(nodeId => {
+                    if (smallest === null || distances[nodeId] < distances[smallest]) {
+                        smallest = nodeId;
+                    }
+                });
+
+                if (smallest === endId || distances[smallest] === Infinity) break;
+                nodesSet.delete(smallest);
+
+                // Neighbors
+                const neighbors = graphEdges.filter(e => e.from === smallest || e.to === smallest);
+                neighbors.forEach(edge => {
+                    const neighborId = edge.from === smallest ? edge.to : edge.from;
+                    if (nodesSet.has(neighborId)) {
+                        const alt = distances[smallest] + edge.weight;
+                        if (alt < distances[neighborId]) {
+                            distances[neighborId] = alt;
+                            previous[neighborId] = smallest;
+                        }
+                    }
+                });
+            }
+
+            const path = [];
+            let curr = endId;
+            while (curr) {
+                path.unshift(curr);
+                curr = previous[curr];
+            }
+
+            const pathEdges = [];
+            for (let i = 0; i < path.length - 1; i++) {
+                pathEdges.push({ from: path[i], to: path[i + 1] });
+            }
+
+            return { path, distance: distances[endId], pathEdges };
+        }
+
+        function runTraversal(type) {
+            const startNode = currentActiveParcel.startHub;
+            const destNode = currentActiveParcel.destHub;
+            const explanationBox = document.getElementById('explanation-text');
+
+            if (type === 'dijkstra') {
+                const res = dijkstra(startNode, destNode);
+                drawGraphSvg('graph-svg', res.path, res.pathEdges);
+                explanationBox.innerHTML = `<strong>Dijkstra Shortest Path:</strong> เส้นทางจาก ${startNode} &rarr; ${destNode} คือ <span class="text-accent-400 font-bold font-mono">${res.path.join(' &rarr; ')}</span> รวมระยะทาง <span class="text-emerald-400 font-bold">${res.distance} km</span>`;
+            } else if (type === 'bfs') {
+                // BFS Traversal Simulation
+                const visited = [];
+                const queue = [startNode];
+                const edgesUsed = [];
+
+                while (queue.length > 0) {
+                    const curr = queue.shift();
+                    if (!visited.includes(curr)) {
+                        visited.push(curr);
+                        const adj = graphEdges.filter(e => e.from === curr || e.to === curr);
+                        adj.forEach(e => {
+                            const nxt = e.from === curr ? e.to : e.from;
+                            if (!visited.includes(nxt) && !queue.includes(nxt)) {
+                                queue.push(nxt);
+                                edgesUsed.push({ from: curr, to: nxt });
+                            }
+                        });
+                    }
+                }
+                drawGraphSvg('graph-svg', visited, edgesUsed);
+                explanationBox.innerHTML = `<strong>BFS Traversal Sequence:</strong> ลำดับโหนดที่เยี่ยมชมแบบกว้าง: <span class="text-brand-400 font-bold font-mono">${visited.join(' &rarr; ')}</span>`;
+            } else if (type === 'dfs') {
+                // DFS Traversal Simulation
+                const visited = [];
+                const edgesUsed = [];
+
+                function dfsUtil(curr) {
+                    visited.push(curr);
+                    const adj = graphEdges.filter(e => e.from === curr || e.to === curr);
+                    adj.forEach(e => {
+                        const nxt = e.from === curr ? e.to : e.from;
+                        if (!visited.includes(nxt)) {
+                            edgesUsed.push({ from: curr, to: nxt });
+                            dfsUtil(nxt);
+                        }
+                    });
+                }
+                dfsUtil(startNode);
+                drawGraphSvg('graph-svg', visited, edgesUsed);
+                explanationBox.innerHTML = `<strong>DFS Traversal Sequence:</strong> ลำดับโหนดที่เยี่ยมชมแบบลึก: <span class="text-amber-400 font-bold font-mono">${visited.join(' &rarr; ')}</span>`;
+            }
+        }
+
+        /* ================= TREE RENDERER & TRAVERSAL ================= */
+
+        function drawTreeSvg(highlightedNodeId = null) {
+            const svg = document.getElementById('tree-svg');
+            if (!svg) return;
+            svg.innerHTML = '';
+
+            // Calculate tree positions
+            const levels = [[treeData], [], [], []];
+            treeData.children.forEach(cat => {
+                levels[1].push(cat);
+                if (cat.children) {
+                    cat.children.forEach(sub => {
+                        levels[2].push(sub);
+                        if (sub.children) {
+                            sub.children.forEach(item => levels[3].push(item));
+                        }
+                    });
+                }
+            });
+
+            // Assign X/Y positions
+            const width = 600;
+            const ySpacing = 100;
+
+            function assignCoords(node, depth, startX, endX) {
+                node.x = (startX + endX) / 2;
+                node.y = depth * ySpacing + 50;
+
+                if (node.children && node.children.length > 0) {
+                    const step = (endX - startX) / node.children.length;
+                    node.children.forEach((child, i) => {
+                        assignCoords(child, depth + 1, startX + i * step, startX + (i + 1) * step);
+                    });
+                }
+            }
+
+            assignCoords(treeData, 0, 20, width - 20);
+
+            // Draw Lines
+            function drawLines(node) {
+                if (node.children) {
+                    node.children.forEach(child => {
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', node.x);
+                        line.setAttribute('y1', node.y);
+                        line.setAttribute('x2', child.x);
+                        line.setAttribute('y2', child.y);
+                        line.setAttribute('stroke', '#334155');
+                        line.setAttribute('stroke-width', '2');
+                        svg.appendChild(line);
+                        drawLines(child);
+                    });
+                }
+            }
+            drawLines(treeData);
+
+            // Draw Nodes
+            function drawNodes(node) {
+                const isSelected = selectedTreeNode.id === node.id || highlightedNodeId === node.id;
+                const isLeaf = !node.children || node.children.length === 0;
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'cursor-pointer');
+                g.onclick = () => selectTreeNode(node);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', isLeaf ? '12' : '16');
+                circle.setAttribute('fill', isSelected ? '#0ea5e9' : (isLeaf ? '#10b981' : '#1e293b'));
+                circle.setAttribute('stroke', isSelected ? '#38bdf8' : '#64748b');
+                circle.setAttribute('stroke-width', '2');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', node.x);
+                text.setAttribute('y', node.y + 25);
+                text.setAttribute('fill', isSelected ? '#38bdf8' : '#e2e8f0');
+                text.setAttribute('font-size', '9');
+                text.setAttribute('font-weight', isSelected ? 'bold' : 'normal');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = node.name.length > 15 ? node.name.substring(0, 13) + '..' : node.name;
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                svg.appendChild(g);
+
+                if (node.children) {
+                    node.children.forEach(c => drawNodes(c));
+                }
+            }
+            drawNodes(treeData);
+        }
+
+        function selectTreeNode(node) {
+            selectedTreeNode = node;
+            drawTreeSvg();
+
+            document.getElementById('tree-node-name').textContent = node.name;
+            document.getElementById('tree-node-role').textContent = node.role;
+            document.getElementById('tree-node-depth').textContent = `Level ${node.depth}`;
+
+            // Find parent
+            let parentName = 'None (Root Node)';
+            function findParent(curr, targetId) {
+                if (curr.children) {
+                    for (let child of curr.children) {
+                        if (child.id === targetId) return curr;
+                        let found = findParent(child, targetId);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            }
+            const parent = findParent(treeData, node.id);
+            if (parent) parentName = parent.name;
+            document.getElementById('tree-node-parent').textContent = parentName;
+
+            // Children list
+            const childrenBox = document.getElementById('tree-node-children');
+            childrenBox.innerHTML = '';
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(c => {
+                    childrenBox.innerHTML += `<span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs text-slate-300">${c.name}</span>`;
+                });
+            } else {
+                childrenBox.innerHTML = '<span class="text-xs text-slate-500 italic">ไม่มี Child Node (Leaf Node)</span>';
+            }
+
+            // Path Root to Leaf
+            const path = [];
+            function buildPath(curr, targetId) {
+                path.push(curr.name);
+                if (curr.id === targetId) return true;
+                if (curr.children) {
+                    for (let c of curr.children) {
+                        if (buildPath(c, targetId)) return true;
+                    }
+                }
+                path.pop();
+                return false;
+            }
+            buildPath(treeData, node.id);
+            document.getElementById('tree-node-path').textContent = path.join(' > ');
+        }
+
+        function runTreeTraversal(type) {
+            const sequence = [];
+
+            if (type === 'preorder') {
+                function preorder(node) {
+                    if (!node) return;
+                    sequence.push(node.name);
+                    if (node.children) node.children.forEach(c => preorder(c));
+                }
+                preorder(treeData);
+                document.getElementById('traversal-title').textContent = 'ผลลัพธ์ Pre-order Traversal (Root &rarr; Left &rarr; Right)';
+                document.getElementById('traversal-type-tag').textContent = 'Pre-order';
+            } else if (type === 'postorder') {
+                function postorder(node) {
+                    if (!node) return;
+                    if (node.children) node.children.forEach(c => postorder(c));
+                    sequence.push(node.name);
+                }
+                postorder(treeData);
+                document.getElementById('traversal-title').textContent = 'ผลลัพธ์ Post-order Traversal (Left &rarr; Right &rarr; Root)';
+                document.getElementById('traversal-type-tag').textContent = 'Post-order';
+            } else if (type === 'bfs') {
+                const queue = [treeData];
+                while (queue.length > 0) {
+                    const curr = queue.shift();
+                    sequence.push(curr.name);
+                    if (curr.children) {
+                        curr.children.forEach(c => queue.push(c));
+                    }
+                }
+                document.getElementById('traversal-title').textContent = 'ผลลัพธ์ Level-order Traversal / BFS (ท่องตามลำดับชั้น)';
+                document.getElementById('traversal-type-tag').textContent = 'BFS Level-order';
+            }
+
+            const seqContainer = document.getElementById('traversal-sequence');
+            seqContainer.innerHTML = sequence.map((item, idx) => `
+                <span class="inline-flex items-center px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-brand-400 font-mono">
+                    <span class="text-slate-500 mr-1.5">${idx + 1}.</span>${item}
+                </span>
+            `).join('');
+        }
+
+        /* ================= INVENTORY & MODAL LOGIC ================= */
+
+        function renderInventoryTable(items = parcelsDatabase) {
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = '';
+
+            items.forEach(p => {
+                let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20">${p.status}</span>`;
+                if (p.status === 'Delivered') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">${p.status}</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition cursor-pointer';
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono font-bold text-brand-400">${p.code}</td>
+                    <td class="py-3 px-4 text-slate-200">${p.item}</td>
+                    <td class="py-3 px-4 text-slate-400">${p.category}</td>
+                    <td class="py-3 px-4 font-mono text-accent-400">${p.hub}</td>
+                    <td class="py-3 px-4 text-slate-300">${p.recipient}</td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                    <td class="py-3 px-4 text-right">
+                        <button onclick="openParcelModal('${p.code}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-[11px]">
+                            ดูรายละเอียด
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterInventory() {
+            const query = document.getElementById('inventory-search').value.toLowerCase();
+            const cat = document.getElementById('filter-category').value;
+            const status = document.getElementById('filter-status').value;
+
+            const filtered = parcelsDatabase.filter(p => {
+                const matchQuery = p.code.toLowerCase().includes(query) || p.item.toLowerCase().includes(query) || p.recipient.toLowerCase().includes(query);
+                const matchCat = cat === 'ALL' || p.category.includes(cat);
+                const matchStatus = status === 'ALL' || p.status === status;
+                return matchQuery && matchCat && matchStatus;
+            });
+
+            renderInventoryTable(filtered);
+        }
+
+        function openParcelModal(code) {
+            const item = parcelsDatabase.find(p => p.code === code);
+            if (!item) return;
+
+            document.getElementById('modal-code').textContent = item.code;
+            document.getElementById('modal-item').textContent = item.item;
+            document.getElementById('modal-category').textContent = item.category;
+            document.getElementById('modal-hub').textContent = item.hub;
+            document.getElementById('modal-sender').textContent = item.startHub + ' Station';
+            document.getElementById('modal-recipient').textContent = item.recipient;
+
+            document.getElementById('modal-discrete-desc').innerHTML = `
+                พัสดุนี้ถือเป็น <strong>Leaf Node</strong> ในโครงสร้างหมวดหมู่แบบ Tree Hierarchy และในเวลาเดียวกันตำแหน่งพัสดุจะถูกระบุด้วย <strong>Vertex [${item.hub}]</strong> ใน Weighted Graph Network
+            `;
+
+            document.getElementById('parcel-modal').classList.remove('hidden');
+            document.getElementById('parcel-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('parcel-modal').classList.add('hidden');
+            document.getElementById('parcel-modal').classList.remove('flex');
+        }
+
+        /* ================= PAGE 4: ROUTE PLANNER LOGIC ================= */
+
+        function initPlannerSelects() {
+            const startSel = document.getElementById('planner-start');
+            const endSel = document.getElementById('planner-end');
+            const edgeFrom = document.getElementById('edge-from');
+            const edgeTo = document.getElementById('edge-to');
+
+            [startSel, endSel, edgeFrom, edgeTo].forEach(sel => sel.innerHTML = '');
+
+            graphNodes.forEach(node => {
+                const opt = `<option value="${node.id}">${node.id} (${node.label})</option>`;
+                startSel.innerHTML += opt;
+                endSel.innerHTML += opt;
+                edgeFrom.innerHTML += opt;
+                edgeTo.innerHTML += opt;
+            });
+
+            endSel.value = 'CMI-Hub';
+        }
+
+        function calculateCustomRoute() {
+            const start = document.getElementById('planner-start').value;
+            const end = document.getElementById('planner-end').value;
+
+            if (start === end) {
+                alert('โปรดเลือก HUB ต้นทางและปลายทางที่แตกต่างกัน');
+                return;
+            }
+
+            const res = dijkstra(start, end);
+            drawGraphSvg('planner-graph-svg', res.path, res.pathEdges);
+
+            document.getElementById('planner-result-box').classList.remove('hidden');
+            document.getElementById('plan-path-str').textContent = res.path.join(' → ');
+            document.getElementById('plan-distance').textContent = `${res.distance} km`;
+            document.getElementById('plan-time').textContent = `~ ${(res.distance / 70).toFixed(1)} ชั่วโมง (ที่ 70 km/h)`;
+        }
+
+        function addNewEdge() {
+            const from = document.getElementById('edge-from').value;
+            const to = document.getElementById('edge-to').value;
+            const weight = parseInt(document.getElementById('edge-weight').value);
+
+            if (from === to) {
+                alert('ไม่สามารถเชื่อม Edge เข้าหา Vertex เดิมได้');
+                return;
+            }
+
+            graphEdges.push({ from, to, weight });
+            renderAdjacencyList();
+            drawGraphSvg('planner-graph-svg');
+            drawGraphSvg('graph-svg');
+            alert(`เพิ่ม Edge [${from} - ${to}: ${weight}km] เรียบร้อยแล้ว!`);
+        }
+
+        /* ================= GENERAL UI TAB SWITCHING ================= */
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`page-${tabId}`).classList.remove('hidden');
+
+            // Navigation active states
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-tab', 'text-brand-400', 'bg-slate-800');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.add('text-brand-400', 'bg-slate-800/80');
+            }
+
+            if (tabId === 'tracking') {
+                drawGraphSvg('graph-svg');
+            } else if (tabId === 'hierarchy') {
+                drawTreeSvg();
+            } else if (tabId === 'planner') {
+                drawGraphSvg('planner-graph-svg');
+            }
+        }
+
+        function selectSampleParcel(code) {
+            document.getElementById('tracking-input').value = code;
+            trackParcelFromInput();
+        }
+
+        function trackParcelFromInput() {
+            const code = document.getElementById('tracking-input').value.trim();
+            const parcel = parcelsDatabase.find(p => p.code === code);
+
+            if (!parcel) {
+                alert('ไม่พบข้อมูลหมายเลขพัสดุในระบบ');
+                return;
+            }
+
+            currentActiveParcel = parcel;
+            document.getElementById('info-code').textContent = parcel.code;
+            document.getElementById('info-recipient').textContent = parcel.recipient;
+            document.getElementById('info-route').textContent = `${parcel.startHub} → ${parcel.destHub}`;
+
+            runTraversal('dijkstra');
+        }
+
+        function onNodeClick(nodeId) {
+            console.log('Clicked Graph Node:', nodeId);
+        }
+
+        /* ================= APPLICATION INITIALIZATION ================= */
+        window.onload = function() {
+            // Render Lucide Icons
+            lucide.createIcons();
+
+            // Setup Data Views
+            renderAdjacencyList();
+            drawGraphSvg('graph-svg');
+            drawTreeSvg();
+            selectTreeNode(treeData);
+            renderInventoryTable();
+            initPlannerSelects();
+            drawGraphSvg('planner-graph-svg');
+
+            // Set Initial Tracking State
+            runTraversal('dijkstra');
+        };
+    </script>
+</body>
+</html>
